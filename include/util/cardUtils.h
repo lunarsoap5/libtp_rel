@@ -36,6 +36,8 @@ namespace libtp::util::card
     };     // Size: 0x40
 
     int32_t GetDirectoryEntries( int32_t chn, DirectoryEntry* dirEntries, int32_t* count, bool showall );
+    // int32_t GetDirectoryEntries( int32_t chn, DirectoryEntry* dirEntries, bool showall );
+    // int32_t GetDirectoryEntries( int32_t chn, bool showall );
 
 }     // namespace libtp::util::card
 

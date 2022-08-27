@@ -36,44 +36,52 @@ namespace libtp::util::card
     */
     typedef void ( *cardcallback )( int32_t chan, int32_t result );
 
+    // typedef struct _card_block
+    // {
+    //     uint8_t cmd[9];
+    //     uint32_t cmd_len;
+    //     uint32_t cmd_mode;
+    //     uint32_t cmd_blck_cnt;
+    //     uint32_t cmd_sector_addr;
+    //     uint32_t cmd_retries;
+    //     uint32_t attached;
+    //     int32_t result;
+    //     uint32_t cid;
+    //     uint16_t card_size;
+    //     uint32_t mount_step;
+    //     uint32_t format_step;
+    //     uint32_t sector_size;
+    //     uint16_t blocks;
+    //     uint32_t latency;
+    //     uint32_t cipher;
+    //     uint32_t key[3];
+    //     uint32_t transfer_cnt;
+    //     uint16_t curr_fileblock;
+    //     card_file* curr_file;
+    //     struct card_dat* curr_dir;
+    //     struct card_bat* curr_fat;
+    //     void* workarea;
+    //     void* cmd_usr_buf;
+    //     uint32_t wait_sync_queue;     // type is lwpq_t
+    //     uint32_t timeout_svc;         // type is syswd_t
+    //     uint8_t dsp_task[0x40];       // type is dsptask_t (struct, not an array)
+
+    //     cardcallback card_ext_cb;
+    //     cardcallback card_tx_cb;
+    //     cardcallback card_exi_cb;
+    //     cardcallback card_api_cb;
+    //     cardcallback card_xfer_cb;
+    //     cardcallback card_erase_cb;
+    //     cardcallback card_unlock_cb;
+    // } card_block;
+
     typedef struct _card_block
     {
-        uint8_t cmd[9];
-        uint32_t cmd_len;
-        uint32_t cmd_mode;
-        uint32_t cmd_blck_cnt;
-        uint32_t cmd_sector_addr;
-        uint32_t cmd_retries;
-        uint32_t attached;
-        int32_t result;
-        uint32_t cid;
-        uint16_t card_size;
-        uint32_t mount_step;
-        uint32_t format_step;
-        uint32_t sector_size;
-        uint16_t blocks;
-        uint32_t latency;
-        uint32_t cipher;
-        uint32_t key[3];
-        uint32_t transfer_cnt;
-        uint16_t curr_fileblock;
-        card_file* curr_file;
-        struct card_dat* curr_dir;
-        struct card_bat* curr_fat;
-        void* workarea;
-        void* cmd_usr_buf;
-        uint32_t wait_sync_queue;     // type is lwpq_t
-        uint32_t timeout_svc;         // type is syswd_t
-        uint8_t dsp_task[0x40];       // type is dsptask_t (struct, not an array)
-
-        cardcallback card_ext_cb;
-        cardcallback card_tx_cb;
-        cardcallback card_exi_cb;
-        cardcallback card_api_cb;
-        cardcallback card_xfer_cb;
-        cardcallback card_erase_cb;
-        cardcallback card_unlock_cb;
+        int32_t attached;
+        int32_t cardResult;
     } card_block;
+    // ^ This is at least 0x88 bytes long since offset 0x84 is a pointer to the
+    // DirectoryEntry data.
 
     /*! \fn s32 CARD_GetDirectory(s32 chn, card_dir *dir_entries, s32 *count, bool showall)
     \brief Returns the directory entries. size of entries is max. 128.
@@ -84,15 +92,31 @@ namespace libtp::util::card
     gamecode string. \return \ref card_errors "card error codes"
     */
     int32_t GetDirectoryEntries( int32_t chn, DirectoryEntry* dirEntries, int32_t* count, bool showall )
+    // int32_t GetDirectoryEntries( int32_t chn, DirectoryEntry* dirEntries, bool showall )
+    // int32_t GetDirectoryEntries( int32_t chn, bool showall )
     {
+        // if ( chn == 0 )
+        //     return 77;
+        // else if ( dirEntries != nullptr )
+        //     return 88;
+        // else if ( showall )
+        //     return 99;
+        // return 33;
+
         int32_t numMatches = 0;
         int32_t ret = CARD_RESULT_READY;
         card_block* cardBlock = nullptr;
 
+        // // temp
+        // if ( showall )
+        //     dirEntries[0].gameCode[0] = 0xab;
+        // *count = 0;
+        // // end temp
+
         if ( chn < CARD_SLOT_A || chn > CARD_SLOT_B )
             return CARD_RESULT_NOCARD;
 
-        ret = libtp::gc_wii::card::__CARDGetControlBlock( chn, (void**) cardBlock );
+        ret = libtp::gc_wii::card::__CARDGetControlBlock( chn, (void**) &cardBlock );
         if ( ret < 0 )
             return ret;
 
@@ -127,7 +151,15 @@ namespace libtp::util::card
         if ( numMatches == 0 )
             ret = CARD_RESULT_NOFILE;
 
-        ret = libtp::gc_wii::card::__CARDPutControlBlock( cardBlock, ret );
+        // We leave the cardResult in the block as it was already in an error
+        // state.
+        int32_t cardResult = cardBlock->cardResult;
+        if ( cardBlock->cardResult == CARD_RESULT_READY )
+        {
+            cardResult = ret;
+        }
+
+        libtp::gc_wii::card::__CARDPutControlBlock( cardBlock, cardResult );
 
         return ret;
     }
