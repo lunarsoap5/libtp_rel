@@ -1,4 +1,4 @@
-#include "util/card.h"
+#include "util/cardutils.h"
 
 #include <cstdint>
 #include <cstring>
@@ -87,7 +87,7 @@ namespace libtp::util::card
     {
         int32_t numMatches = 0;
         int32_t ret = CARD_RESULT_READY;
-        card_block* cardBlock;
+        card_block* cardBlock = nullptr;
 
         if ( chn < CARD_SLOT_A || chn > CARD_SLOT_B )
             return CARD_RESULT_NOCARD;
