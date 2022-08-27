@@ -18,11 +18,11 @@ namespace libtp::util::card
 {
     struct DirectoryEntry
     {
-        /* 0x00 */ uint8_t gameCode[4];
-        /* 0x04 */ uint8_t publisherCode[2];
+        /* 0x00 */ char gameCode[4];
+        /* 0x04 */ char publisherCode[2];
         /* 0x06 */ uint8_t padding_06;
         /* 0x07 */ uint8_t imageFlags;
-        /* 0x08 */ uint8_t filename[CARD_FILENAME_MAX];
+        /* 0x08 */ char filename[CARD_FILENAME_MAX];
         /* 0x28 */ uint32_t lastModified;
         /* 0x2C */ uint32_t imageDataOffset;
         /* 0x30 */ uint16_t iconFormats;
