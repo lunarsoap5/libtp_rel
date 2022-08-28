@@ -92,26 +92,10 @@ namespace libtp::util::card
     gamecode string. \return \ref card_errors "card error codes"
     */
     int32_t GetDirectoryEntries( int32_t chn, DirectoryEntry* dirEntries, int32_t* count, bool showall )
-    // int32_t GetDirectoryEntries( int32_t chn, DirectoryEntry* dirEntries, bool showall )
-    // int32_t GetDirectoryEntries( int32_t chn, bool showall )
     {
-        // if ( chn == 0 )
-        //     return 77;
-        // else if ( dirEntries != nullptr )
-        //     return 88;
-        // else if ( showall )
-        //     return 99;
-        // return 33;
-
         int32_t numMatches = 0;
         int32_t ret = CARD_RESULT_READY;
         card_block* cardBlock = nullptr;
-
-        // // temp
-        // if ( showall )
-        //     dirEntries[0].gameCode[0] = 0xab;
-        // *count = 0;
-        // // end temp
 
         if ( chn < CARD_SLOT_A || chn > CARD_SLOT_B )
             return CARD_RESULT_NOCARD;
@@ -120,46 +104,43 @@ namespace libtp::util::card
         if ( ret < 0 )
             return ret;
 
-        if ( !cardBlock->attached )
-            return CARD_RESULT_NOCARD;
-
-        DirectoryEntries* dirblock =
-            static_cast<DirectoryEntries*>( libtp::gc_wii::card::__CARDGetDirBlock( (void*) cardBlock ) );
-
-        DirectoryEntry* entries = dirblock->entries;
-
-        // update these to read from correct address
-        char card_gamecode[4] = { 'G', 'Z', '2', 'E' };
-        char card_company[2] = { '0', '1' };
-
-        for ( int i = 0; i < CARD_MAX_FILE; i++ )
+        if ( cardBlock->attached )
         {
-            if ( entries[i].gameCode[0] != 0xFF )
+            DirectoryEntries* dirblock =
+                static_cast<DirectoryEntries*>( libtp::gc_wii::card::__CARDGetDirBlock( (void*) cardBlock ) );
+
+            DirectoryEntry* entries = dirblock->entries;
+
+            // update these to read from correct address
+            char card_gamecode[4] = { 'G', 'Z', '2', 'E' };
+            char card_company[2] = { '0', '1' };
+
+            for ( int i = 0; i < CARD_MAX_FILE; i++ )
             {
-                if ( showall || ( ( card_gamecode[0] != 0xFF && memcmp( entries[i].gameCode, card_gamecode, 4 ) == 0 ) &&
-                                  ( card_company[0] != 0xFF && memcmp( entries[i].publisherCode, card_company, 2 ) == 0 ) ) )
+                if ( entries[i].gameCode[0] != 0xFF )
                 {
-                    memcpy( (void*) &dirEntries[numMatches], (void*) &entries[i], sizeof( DirectoryEntry ) );
-                    numMatches += 1;
+                    if ( showall ||
+                         ( ( card_gamecode[0] != 0xFF && memcmp( entries[i].gameCode, card_gamecode, 4 ) == 0 ) &&
+                           ( card_company[0] != 0xFF && memcmp( entries[i].publisherCode, card_company, 2 ) == 0 ) ) )
+                    {
+                        memcpy( (void*) &dirEntries[numMatches], (void*) &entries[i], sizeof( DirectoryEntry ) );
+                        numMatches += 1;
+                    }
                 }
             }
+
+            if ( count != nullptr )
+                *count = numMatches;
+
+            if ( numMatches == 0 )
+                ret = CARD_RESULT_NOFILE;
         }
-
-        if ( count != nullptr )
-            *count = numMatches;
-
-        if ( numMatches == 0 )
-            ret = CARD_RESULT_NOFILE;
-
-        // We leave the cardResult in the block as it was already in an error
-        // state.
-        int32_t cardResult = cardBlock->cardResult;
-        if ( cardBlock->cardResult == CARD_RESULT_READY )
+        else
         {
-            cardResult = ret;
+            ret = CARD_RESULT_NOCARD;
         }
 
-        libtp::gc_wii::card::__CARDPutControlBlock( cardBlock, cardResult );
+        libtp::gc_wii::card::__CARDPutControlBlock( cardBlock, ret );
 
         return ret;
     }
