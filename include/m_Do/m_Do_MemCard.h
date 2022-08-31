@@ -44,6 +44,7 @@ namespace libtp::m_Do_MemCard
 
     extern "C"
     {
+        void mDoMemCd_Ctrl_c__detach( mDoMemCd_Ctrl_c* _this );
         // Decomp says this function returns an s32. Need to confirm with the map.
         bool mDoMemCd_Ctrl_c__loadfile( mDoMemCd_Ctrl_c* _this );
     }
