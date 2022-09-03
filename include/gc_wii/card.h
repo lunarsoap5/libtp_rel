@@ -4,6 +4,7 @@
  *	Refer to the dolphin OS Reference Manual for further information
  *
  *	@author AECX
+ *	@author Isaac
  *	@bug No known bugs.
  */
 #ifndef GC_WII_CARD_H
@@ -51,6 +52,34 @@
 
 namespace libtp::gc_wii::card
 {
+    // Added underscores to the start of the struct name since this struct is
+    // normally only exposed internally. The Directory block is composed of up
+    // to 127 of these. Also known as the GCI header. More info:
+    // https://icogn.github.io/tp-docs/docs/save-file/memory-card
+    struct __DirEntry
+    {
+        /* 0x00 */ char gameCode[4];
+        /* 0x04 */ char publisherCode[2];
+        /* 0x06 */ uint8_t padding_06;
+        /* 0x07 */ uint8_t imageFlags;
+        /* 0x08 */ char filename[CARD_FILENAME_MAX];
+        /* 0x28 */ uint32_t lastModified;
+        /* 0x2C */ uint32_t imageDataOffset;
+        /* 0x30 */ uint16_t iconFormats;
+        /* 0x32 */ uint16_t iconAnimationSpeeds;
+        /* 0x34 */ uint8_t permissions;
+        /* 0x35 */ uint8_t copyCounter;
+        /* 0x36 */ uint16_t firstBlockIndex;
+        /* 0x38 */ uint16_t numBlocks;
+        /* 0x3A */ uint16_t padding_3A;
+        /* 0x3C */ uint32_t commentsOffset;
+    } __attribute__( ( __packed__ ) );     // Size: 0x40
+
+    struct __DirEntries
+    {
+        __DirEntry entries[CARD_MAX_FILE];
+    };
+
     struct CARDFileInfo
     {
         int32_t chan;
@@ -263,11 +292,16 @@ namespace libtp::gc_wii::card
         int32_t __CARDUpdateFatBlock( int32_t chan, void* fatBlock, CARDCallback callback );
 
         /**
-         *  @brief Gets the directly block for a specified file on the memory card (This description may be incorrect)
+         *  @brief Returns a pointer to the DirEntries of a Directory block.
+         *  This should only be used after the card is mounted successfully.
+         *  Make sure to call __CARDGetControlBlock before using this function,
+         *  and don't forget to clean up with __CARDPutControlBlock.
          *
-         *  @param card Pointer to the current card block (Struct for this not defined yet)
+         *  @param card Pointer to the current card block (Struct for this not
+         *  defined yet, but this function simply returns a pointer stored at
+         *  offset 0x84 of the param).
          */
-        void* __CARDGetDirBlock( void* card );
+        __DirEntries* __CARDGetDirBlock( void* card );
 
         /**
          *  @brief Updates the directly block for a specified file on the memory card (This description may be incorrect)

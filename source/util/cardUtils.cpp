@@ -7,10 +7,8 @@
 
 namespace libtp::util::card
 {
-    struct DirectoryEntries
-    {     // dir allocation table
-        DirectoryEntry entries[CARD_MAX_FILE];
-    };
+    using libtp::gc_wii::card::__DirEntries;
+    using libtp::gc_wii::card::__DirEntry;
 
     /*! \typedef struct _card_file card_file
     \brief structure to hold the fileinformations upon open and for later use.
@@ -91,7 +89,7 @@ namespace libtp::util::card
     \param[in] showall Whether to show all files of the memory card or only those which are identified by the company and
     gamecode string. \return \ref card_errors "card error codes"
     */
-    int32_t GetDirectoryEntries( int32_t chn, DirectoryEntry* dirEntries, int32_t* count, bool showall )
+    int32_t GetDirEntries( int32_t chn, __DirEntry* dirEntries, int32_t* count, bool showall )
     {
         int32_t numMatches = 0;
         int32_t ret = CARD_RESULT_READY;
@@ -106,14 +104,12 @@ namespace libtp::util::card
 
         if ( cardBlock->attached )
         {
-            DirectoryEntries* dirblock =
-                static_cast<DirectoryEntries*>( libtp::gc_wii::card::__CARDGetDirBlock( (void*) cardBlock ) );
+            __DirEntries* dirblock = static_cast<__DirEntries*>( libtp::gc_wii::card::__CARDGetDirBlock( (void*) cardBlock ) );
 
-            DirectoryEntry* entries = dirblock->entries;
+            __DirEntry* entries = dirblock->entries;
 
-            // update these to read from correct address
-            char card_gamecode[4] = { 'G', 'Z', '2', 'E' };
-            char card_company[2] = { '0', '1' };
+            char* card_gamecode = reinterpret_cast<char*>( 0x80000000 );
+            char* card_company = reinterpret_cast<char*>( 0x80000004 );
 
             for ( int i = 0; i < CARD_MAX_FILE; i++ )
             {
@@ -123,7 +119,7 @@ namespace libtp::util::card
                          ( ( card_gamecode[0] != 0xFF && memcmp( entries[i].gameCode, card_gamecode, 4 ) == 0 ) &&
                            ( card_company[0] != 0xFF && memcmp( entries[i].publisherCode, card_company, 2 ) == 0 ) ) )
                     {
-                        memcpy( (void*) &dirEntries[numMatches], (void*) &entries[i], sizeof( DirectoryEntry ) );
+                        memcpy( (void*) &dirEntries[numMatches], (void*) &entries[i], sizeof( __DirEntry ) );
                         numMatches += 1;
                     }
                 }
