@@ -52,11 +52,10 @@
 
 namespace libtp::gc_wii::card
 {
-    // Added underscores to the start of the struct name since this struct is
-    // normally only exposed internally. The Directory block is composed of up
-    // to 127 of these. Also known as the GCI header. More info:
+    // The Directory block is composed of up to 127 of these. Also known as the
+    // GCI header. More info:
     // https://icogn.github.io/tp-docs/docs/save-file/memory-card
-    struct __DirEntry
+    struct CARDDirEntry
     {
         /* 0x00 */ char gameCode[4];
         /* 0x04 */ char publisherCode[2];
@@ -75,9 +74,9 @@ namespace libtp::gc_wii::card
         /* 0x3C */ uint32_t commentsOffset;
     } __attribute__( ( __packed__ ) );     // Size: 0x40
 
-    struct __DirEntries
+    struct CARDDirEntries
     {
-        __DirEntry entries[CARD_MAX_FILE];
+        CARDDirEntry entries[CARD_MAX_FILE];
     };
 
     struct CARDFileInfo
@@ -115,18 +114,27 @@ namespace libtp::gc_wii::card
         uint32_t offsetData;
     } __attribute__( ( __packed__ ) );
 
+    typedef void ( *CARDCallback )( int32_t chan, int32_t result );
+
+    // Offset 0x84 is a pointer to the DirectoryEntry data.
     struct CARDBlock
     {
-        uint8_t unk[0x110];
-    } __attribute__( ( __packed__ ) );
-
-    typedef void ( *CARDCallback )( int32_t chan, int32_t result );
+        /* 0x000 */ int32_t attached;
+        /* 0x004 */ int32_t cardResult;
+        /* 0x008 */ uint8_t unk_008[0xB6];
+        /* 0x0BE */ uint16_t currFileBlock;
+        /* 0x0C0 */ uint8_t unk_0C0[0x10];
+        /* 0x0D0 */ CARDCallback cardApiCb;
+        /* 0x0D4 */ uint8_t unk_0D4[0x3C];
+    } __attribute__( ( __packed__ ) );     // Size: 0x110
 
     extern "C"
     {
         // Variables
         /**
-         *  @brief No decent description at this time
+         *  @brief Array with one CARDBlock for each memory card slot (0: slot
+         *  A, 1: slot B). These control blocks are "get" and "put" when card
+         *  operations are done.
          */
         extern CARDBlock __CARDBlock[2];     // One for each memory card slot
 
@@ -260,33 +268,44 @@ namespace libtp::gc_wii::card
         void __CARDSyncCallback( int32_t chan, int32_t result );
 
         /**
-         *  @brief Gets the control block for the desired memory card slot
+         *  @brief Gets the control block for the desired memory card slot.
          *
          *  @param chan Slot number (0: slot A, 1: slot B).
-         *  @param card Output for the pointer to the current card block (Struct for this not defined yet)
+         *  @param card Address to which a pointer to the CARDBlock for the
+         *  given card slot is written.
          */
-        int32_t __CARDGetControlBlock( int32_t chan, void** card );
+        int32_t __CARDGetControlBlock( int32_t chan, CARDBlock** card );
 
         /**
-         *  @brief Puts the control block for the desired memory card slot
+         *  @brief Puts the control block for the desired memory card slot, and
+         *  updates the cardResult in the control block (except when attached is
+         *  0 and the current cardResult is not CARD_RESULT_BUSY, in which case
+         *  the cardResult is not updated).
          *
-         *  @param card Pointer to the current card block (Struct for this not defined yet)
-         *  @param result Return value of the most recent CARD function (This description may be incorrect)
+         *  @param card Pointer to a CARDBlock. The value for this would have
+         *  come from __CARDGetControlBlock.
+         *  @param result Card result which should be written to the CARDBlock.
+         *  The provided value will always be the return value of the function.
+         *  This value could be any CARD_RESULT, but it should not be
+         *  CARD_RESULT_BUSY.
          */
-        int32_t __CARDPutControlBlock( void* card, int32_t result );
+        int32_t __CARDPutControlBlock( CARDBlock* card, int32_t result );
 
         /**
-         *  @brief Suspends the current thread until the most resent asynchronous CARD function has finished its operation
+         *  @brief Suspends the current thread until the most recent
+         *  asynchronous CARD function has finished its operation.
          *
          *  @param chan Slot number (0: slot A, 1: slot B).
          */
         int32_t __CARDSync( int32_t chan );
 
         /**
-         *  @brief Updates the fat block section for a specific file on the memory card (This description may be incorrect)
+         *  @brief Updates the fat block section for a specific file on the
+         *  memory card (This description may be incorrect).
          *
          *  @param chan Slot number (0: slot A, 1: slot B).
-         *  @param fatBlock Fat block section to be updated (Struct for this not defined yet)
+         *  @param fatBlock Fat block section to be updated (Struct for this not
+         *  defined yet)
          *  @param callback Callback function
          */
         int32_t __CARDUpdateFatBlock( int32_t chan, void* fatBlock, CARDCallback callback );
@@ -297,11 +316,10 @@ namespace libtp::gc_wii::card
          *  Make sure to call __CARDGetControlBlock before using this function,
          *  and don't forget to clean up with __CARDPutControlBlock.
          *
-         *  @param card Pointer to the current card block (Struct for this not
-         *  defined yet, but this function simply returns a pointer stored at
-         *  offset 0x84 of the param).
+         *  @param card Pointer to a CARDBlock (this function simply returns a
+         *  pointer stored at offset 0x84 of the CARDBlock).
          */
-        __DirEntries* __CARDGetDirBlock( void* card );
+        CARDDirEntry* __CARDGetDirBlock( CARDBlock* cardBlock );
 
         /**
          *  @brief Updates the directly block for a specified file on the memory card (This description may be incorrect)
@@ -318,7 +336,7 @@ namespace libtp::gc_wii::card
          * incorrect) (Struct for this not defined yet)
          *  @param fileName Internal name for the desired file on the memory card
          */
-        bool __CARDCompareFileName( void* dirBlock, const char* fileName );
+        bool __CARDCompareFileName( CARDDirEntry* dirBlock, const char* fileName );
 
         /**
          *  @brief Determines if the current file on the memory card can be accessed
@@ -327,15 +345,15 @@ namespace libtp::gc_wii::card
          *  @param dirBlock Pointer the directly block for a specified file on the memory card (This description may be
          * incorrect) (Struct for this not defined yet)
          */
-        int32_t __CARDAccess( void* card, void* dirBlock );
+        int32_t __CARDAccess( CARDBlock* card, CARDDirEntry* dirEntry );
 
         /**
-     *  @brief Gets the status of a file.
-     *
-     *  @param chan EXI channel number
-        @param fileNo Index to the desired file on the memory card
-        @param stat Output for the status of the file
-    */
+         *  @brief Gets the status of a file.
+         *
+         *  @param chan EXI channel number
+         *  @param fileNo Index to the desired file on the memory card
+         *  @param stat Output for the status of the file
+         */
         int32_t CARDGetStatus( int32_t chan, int32_t fileNo, CARDStat* stat );
     }
 
@@ -364,7 +382,7 @@ namespace libtp::gc_wii::card
      *  @param fileName Internal name for the desired file on the memory card
      *  @param fileNo Output for the index to the desired file on the memory card
      */
-    int32_t __CARDGetFileNo( void* card, const char* fileName, int32_t* fileNo );
+    int32_t __CARDGetFileNo( CARDBlock* card, const char* fileName, int32_t* fileNo );
 
     /**
      *  @brief Deletes a file asynchronously
@@ -382,6 +400,29 @@ namespace libtp::gc_wii::card
      *  @param fileName Internal name for the desired file on the memory card
      */
     int32_t CARDDelete( int32_t chan, const char* fileName );
+
+    /**
+     *  @brief Gets the DirEntries for a memory card. Based on params, copies
+     *  data into dirEntries for each matching DirEntry. The number of copied
+     *  entries is written to `count`. Note this should be called after the
+     *  memory card has been mounted (at the same time you might call CARDOpen,
+     *  for example). This function is based off of CARD_GetDirectory from
+     *  https://github.com/devkitPro/libogc/blob/master/gc/ogc/card.h
+     *
+     *  @param chan EXI channel number (must be memory card slot A or B)
+     *  @param dirEntries pointer to a fresh CARDDirEntries. This will have
+     *  enough space to store data for the maximum of 127 files on the memory
+     *  card. You will likely run into issues trying to allocate this on the
+     *  stack, so allocate it on the heap.
+     *  @param count pointer to which the number of matching DirEntry is
+     *  written.
+     *  @param showAll If true, every DirEntry for any game on the memory card
+     *  will be copied to `dirEntries`. If false, will only copy ones which
+     *  match the publisherCode and gameCode of the game being played (for
+     *  example, DirEntry which start with "GZ2E01").
+     *  @return Code indicating success or reason for failure.
+     */
+    int32_t CARDGetDirEntries( int32_t chan, CARDDirEntries* dirEntries, int32_t* count, bool showAll );
 
 }     // namespace libtp::gc_wii::card
 
