@@ -50,6 +50,9 @@
 
 #define CARD_READ_SIZE 512
 
+// Length of comments in file on memory card is 0x40 bytes.
+#define CARD_COMMENTS_LENGTH 64
+
 namespace libtp::gc_wii::card
 {
     // The Directory block is composed of up to 127 of these. Also known as the
