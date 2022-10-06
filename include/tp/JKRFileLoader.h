@@ -11,10 +11,10 @@
 
 #include "tp/JKRDisposer.h"
 
-namespace libtp::tp
+namespace libtp::tp::JKRFileLoader
 {
     class JKRFileFinder;
-    class JKRFileLoader: public JKRDisposer
+    class JKRFileLoader: public libtp::tp::JKRDisposer::JKRDisposer
     {
        public:
         /* 0x00 */                               // vtable
@@ -26,6 +26,6 @@ namespace libtp::tp
         /* 0x31 */ uint8_t field_0x31[3];
         /* 0x34 */ uint32_t mMountCount;
     };
-}     // namespace libtp::tp
+}     // namespace libtp::tp::JKRFileLoader
 
 #endif

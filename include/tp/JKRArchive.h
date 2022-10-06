@@ -12,7 +12,7 @@
 #include "tp/JKRFileLoader.h"
 #include "tp/JKRHeap.h"
 
-namespace libtp::tp
+namespace libtp::tp::JKRArchive
 {
     struct SArcHeader
     {
@@ -39,7 +39,7 @@ namespace libtp::tp
         /* 0x1B */ uint8_t field_1b[5];
     };
 
-    class JKRArchive: public JKRFileLoader
+    class JKRArchive: public libtp::tp::JKRFileLoader::JKRFileLoader
     {
        public:
         struct SDirEntry
@@ -87,9 +87,9 @@ namespace libtp::tp
             MOUNT_DIRECTION_TAIL = 2,
         };
 
-        /* 0x00 */     // vtable
-        /* 0x04 */     // JKRFileLoader
-        /* 0x38 */ JKRHeap* mHeap;
+        /* 0x00 */                  // vtable
+        /* 0x04 */                  // JKRFileLoader
+        /* 0x38 */ void* mHeap;     // JKRHeap* mHeap;
         /* 0x3C */ uint8_t mMountMode;
         /* 0x3D */ uint8_t field_0x3d[3];
         /* 0x40 */ int32_t mEntryNum;
@@ -100,12 +100,10 @@ namespace libtp::tp
         /* 0x54 */ char* mStringTable;
         /* 0x58 */ uint32_t field_0x58;
     };
-
     extern "C"
     {
-        void* JKRArchive_getResource2( void* _this, uint32_t type, const char* file );
+        void* JKRArchive_getResource2( void* JKRArchive, uint32_t type, const char* file );
         JKRArchive::SDIFileEntry* JKRArchive_findFsResource( JKRArchive* _this, const char* name, uint32_t param_2 );
     }
-}     // namespace libtp::tp
-
+}     // namespace libtp::tp::JKRArchive
 #endif
