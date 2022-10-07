@@ -2,6 +2,7 @@
 #include <cstring>
 
 #include "util/color_utils.h"
+#include "tp/m_do_printf.h"
 
 namespace libtp::util::texture
 {
@@ -12,18 +13,18 @@ namespace libtp::util::texture
             return nullptr;
         }
 
-        uint16_t numTextures = *( reinterpret_cast<uint16_t*>( tex1Ptr + 8 ) );
-        uint8_t* strTable = tex1Ptr + *( reinterpret_cast<uint32_t*>( tex1Ptr + 0x10 ) );
+        uint16_t numTextures = *reinterpret_cast<uint16_t*>( tex1Ptr + 8 );
+        uint8_t* strTable = tex1Ptr + *reinterpret_cast<uint32_t*>( tex1Ptr + 0x10 );
 
-        uint16_t numStrings = *( reinterpret_cast<uint16_t*>( strTable ) );
+        uint16_t numStrings = *reinterpret_cast<uint16_t*>( strTable );
 
         for ( uint16_t i = 0; i < numStrings && i < numTextures; i++ )
         {
-            uint16_t offsetInStrTable = *( reinterpret_cast<uint16_t*>( strTable + 4 + 2 + 4 * i ) );
+            uint16_t offsetInStrTable = *reinterpret_cast<uint16_t*>( strTable + 6 + ( 4 * i ) );
             char* strPtr = reinterpret_cast<char*>( strTable + offsetInStrTable );
             if ( strcmp( strPtr, textureName ) == 0 )
             {
-                return tex1Ptr + 0x20 + i * 0x20;
+                return tex1Ptr + 0x20 + ( i * 0x20 );
             }
         }
 
@@ -86,26 +87,26 @@ namespace libtp::util::texture
         }
 
         uint16_t recolors[0x100];
-        for ( int i = 0; i < 0x100; i++ )
+        for ( int32_t i = 0; i < 0x100; i++ )
         {
             recolors[i] = libtp::util::color::blendOverlayRgb565( i, rgb );
         }
 
-        int width = *( reinterpret_cast<uint16_t*>( texHeaderPtr + 2 ) );
-        int height = *( reinterpret_cast<uint16_t*>( texHeaderPtr + 4 ) );
+        int32_t width = *reinterpret_cast<uint16_t*>( texHeaderPtr + 2 );
+        int32_t height = *reinterpret_cast<uint16_t*>( texHeaderPtr + 4 );
 
-        int blockWidth = 8;
-        int blockHeight = 8;
+        constexpr int32_t blockWidth = 8;
+        constexpr int32_t blockHeight = 8;
 
-        int roundedWidth = width + ( ( blockWidth - ( width % blockWidth ) ) % blockWidth );
-        int roundedHeight = height + ( ( blockHeight - ( height % blockHeight ) ) % blockHeight );
+        int32_t roundedWidth = width + ( ( blockWidth - ( width % blockWidth ) ) % blockWidth );
+        int32_t roundedHeight = height + ( ( blockHeight - ( height % blockHeight ) ) % blockHeight );
 
-        int numBlocks = roundedWidth / blockWidth * roundedHeight / blockHeight;
+        int32_t numBlocks = roundedWidth / blockWidth * roundedHeight / blockHeight;
 
-        int iterations = numBlocks * 4;
+        int32_t iterations = numBlocks * 4;
 
-        uint8_t* currentAddr = texHeaderPtr + *( reinterpret_cast<int32_t*>( texHeaderPtr + 0x1C ) );
-        for ( int i = 0; i < iterations; i++ )
+        uint8_t* currentAddr = texHeaderPtr + *reinterpret_cast<int32_t*>( texHeaderPtr + 0x1C );
+        for ( int32_t i = 0; i < iterations; i++ )
         {
             uint16_t* rgb565Ptr = reinterpret_cast<uint16_t*>( currentAddr );
 
@@ -176,34 +177,34 @@ namespace libtp::util::texture
             return nullptr;
         }
 
-        uint32_t j3d2Magic = *( reinterpret_cast<uint32_t*>( bmdPtr ) );
+        uint32_t j3d2Magic = *reinterpret_cast<uint32_t*>( bmdPtr );
         if ( j3d2Magic != 0x4A334432 )
         {
             // Model was not a BMD or BDL! (J3D2 magic not found)
             return nullptr;
         }
-        uint32_t modelMagic = *( reinterpret_cast<uint32_t*>( bmdPtr + 4 ) );
+        uint32_t modelMagic = *reinterpret_cast<uint32_t*>( bmdPtr + 4 );
         if ( ( modelMagic != 0x62646C34 ) && ( modelMagic != 0x626D6433 ) )
         {
             // Model was not a BMD or BDL! (Model type was not bmd3 or bdl4)
             return nullptr;
         }
 
-        int32_t modelSize = *( reinterpret_cast<int32_t*>( bmdPtr + 8 ) );
-        int32_t sectionCount = *( reinterpret_cast<int32_t*>( bmdPtr + 0xC ) );
+        int32_t modelSize = *reinterpret_cast<int32_t*>( bmdPtr + 8 );
+        int32_t sectionCount = *reinterpret_cast<int32_t*>( bmdPtr + 0xC );
         uint8_t* endOfModelAddr = bmdPtr + modelSize;
 
         uint8_t* currentSectionAddr = bmdPtr + 0x20;
-        for ( int i = 0; i < sectionCount; i++ )
+        for ( int32_t i = 0; i < sectionCount; i++ )
         {
-            uint32_t sectionMagic = *( reinterpret_cast<uint32_t*>( currentSectionAddr ) );
+            uint32_t sectionMagic = *reinterpret_cast<uint32_t*>( currentSectionAddr );
             if ( sectionMagic == 0x54455831 )
             {
                 // Section is TEX1
                 return currentSectionAddr;
             }
 
-            currentSectionAddr += *( reinterpret_cast<int32_t*>( currentSectionAddr + 4 ) );
+            currentSectionAddr += *reinterpret_cast<int32_t*>( currentSectionAddr + 4 );
 
             if ( currentSectionAddr >= endOfModelAddr )
             {
