@@ -178,13 +178,13 @@ namespace libtp::util::texture
         }
 
         uint32_t j3d2Magic = *reinterpret_cast<uint32_t*>( bmdPtr );
-        if ( j3d2Magic != 0x4A334432 )
+        if ( j3d2Magic != 0x4A334432 )     // J3D2
         {
             // Model was not a BMD or BDL! (J3D2 magic not found)
             return nullptr;
         }
         uint32_t modelMagic = *reinterpret_cast<uint32_t*>( bmdPtr + 4 );
-        if ( ( modelMagic != 0x62646C34 ) && ( modelMagic != 0x626D6433 ) )
+        if ( ( modelMagic != 0x62646C34 ) && ( modelMagic != 0x626D6433 ) )     // bmd3 and bdl4
         {
             // Model was not a BMD or BDL! (Model type was not bmd3 or bdl4)
             return nullptr;
@@ -198,7 +198,7 @@ namespace libtp::util::texture
         for ( int32_t i = 0; i < sectionCount; i++ )
         {
             uint32_t sectionMagic = *reinterpret_cast<uint32_t*>( currentSectionAddr );
-            if ( sectionMagic == 0x54455831 )
+            if ( sectionMagic == 0x54455831 )     // TEX1
             {
                 // Section is TEX1
                 return currentSectionAddr;
